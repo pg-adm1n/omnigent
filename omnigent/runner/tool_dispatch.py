@@ -2180,6 +2180,14 @@ async def _execute_subagent_tool(
                 "existing session. Re-send without 'model' to continue "
                 f"session {target_session_id!r}."
             )
+        if reasoning_effort is not None:
+            return (
+                "Error: sys_session_send 'reasoning_effort' applies only "
+                "when a sub-agent session is first created; it cannot "
+                "change an existing session. Re-send without "
+                "'reasoning_effort' to continue "
+                f"session {target_session_id!r}."
+            )
         if file_ids:
             return (
                 "Error: sys_session_send 'file_ids' is supported only when "
@@ -2290,6 +2298,15 @@ async def _execute_subagent_tool(
                 f"{child_session_id}. Re-send without 'model' to continue "
                 "it, or sys_session_close it first to spawn a fresh "
                 "session on the requested model."
+            )
+        if reasoning_effort is not None:
+            return (
+                f"Error: sys_session_send 'reasoning_effort' applies only when a "
+                f"sub-agent session is first created; {sub_agent_name!r} "
+                f"title {session_name!r} already exists as "
+                f"{child_session_id}. Re-send without 'reasoning_effort' to "
+                "continue it, or sys_session_close it first to spawn a fresh "
+                "session with the requested effort."
             )
         if file_ids:
             return (
