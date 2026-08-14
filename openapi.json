@@ -646,6 +646,18 @@
             "description": "Error details from the child's most recent failed run, e.g. `{\"code\": \"required_terminal_exited\", \"message\": \"...\"}`. `None` when the child has no durable failure detail. This is the typed projection of runner-owned failure labels; clients should not parse those labels directly.",
             "title": "Last Task Error"
           },
+          "model_override": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Explicit model pinned for this child, including a model selected directly by the caller rather than by Smart Routing. `None` when the child inherits the parent/spec model.",
+            "title": "Model Override"
+          },
           "object": {
             "default": "child_session",
             "description": "Fixed resource type, always `\"child_session\"`.",
@@ -663,6 +675,17 @@
             "format": "int64",
             "title": "Pending Elicitations Count",
             "type": "integer"
+          },
+          "reasoning_effort": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reasoning Effort"
           },
           "routed_model": {
             "anyOf": [
