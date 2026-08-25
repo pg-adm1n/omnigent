@@ -9664,7 +9664,6 @@ def _child_session_summary_from_conversation(
         # conversation label rather than a new column.
         routed_model=conv.model_override if routing_decision_id is not None else None,
         model_override=conv.model_override,
-        reported_model=conv.reported_model,
         reasoning_effort=conv.reasoning_effort,
         routing_decision_id=routing_decision_id,
     )
