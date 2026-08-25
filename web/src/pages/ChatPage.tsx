@@ -175,6 +175,7 @@ import {
   isCostRoutingSession,
   isSubagentRoutingSession,
 } from "@/components/CostRoutingControl";
+import { CLAUDE_NATIVE_MODELS } from "@/lib/claudeNativeModels";
 import {
   SMART_ROUTING_ARMS,
   hostBacksHarnessWithGateway,

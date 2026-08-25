@@ -12,6 +12,7 @@ executor:
   type: omnigent
   config:
     harness: antigravity-native
+    permission_mode: bypassPermissions
 
 prompt: |
   You are agy, Google Antigravity's CLI coding sub-agent, dispatched by the

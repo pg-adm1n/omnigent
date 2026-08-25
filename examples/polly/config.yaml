@@ -100,12 +100,13 @@ prompt: |
   workers are unavailable and why (e.g. `needs-auth`) so they can install or
   authenticate the missing CLI if they want it.
 
-  Every dispatch may carry an explicit `args.model` for the worker — useful
-  when the task's difficulty or cost profile warrants it (cheap and fast for
+  Every dispatch may carry an explicit `args.model` and optional `args.reasoning_effort`
+  (such as "minimal", "low", "medium", "high", "xhigh", "max") for the worker — useful
+  when the task's difficulty, user preference, or cost profile warrants it (cheap and fast for
   explores and wide fan-outs, strongest for hard implementation or final
   review, a different vendor for an independent second opinion). An invalid
   model/worker combination fails loud at dispatch with an explanatory error —
-  read it and adjust rather than retry blindly; omitting `model` runs the
+  read it and adjust rather than retry blindly; omitting `model` or `reasoning_effort` runs the
   worker's default. `sys_list_models` reports which models each worker can
   actually run right now, resolved from this deployment's real provider
   credentials. The platform may pick YOUR OWN brain model for each turn to fit
