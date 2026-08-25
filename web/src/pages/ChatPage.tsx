@@ -1050,7 +1050,7 @@ export function ChatPage() {
       showClaudePermissionMode={shouldShowClaudePermissionModeControl(capabilitySource)}
       showCodexApprovalMode={shouldShowCodexApprovalModeControl(capabilitySource)}
       showGoalControl={shouldShowGoalControl(capabilitySource)}
-      showClaudeGoalControl={shouldShowPollyClaudeGoalControl(activeSession)}
+      showClaudeGoalControl={shouldShowClaudeGoalControl(capabilitySource, activeSession)}
       showPollyCodexGoalControl={shouldShowPollyCodexGoalControl(activeSession)}
       costRoutingEligible={costRoutingEligible}
       subagentRoutingEligible={subagentRoutingEligible}
@@ -4291,6 +4291,19 @@ export function shouldShowGoalControl(
   conv: { labels?: Record<string, string | null> | null } | null | undefined,
 ): boolean {
   return isCodexNativeSession(conv);
+}
+
+/**
+ * True for Claude sessions (claude-native wrapper, claude-sdk, or top-level Polly Claude session)
+ * where the /goal slash command can be sent.
+ */
+export function shouldShowClaudeGoalControl(
+  conv: { labels?: Record<string, string | null> | null } | null | undefined,
+  session?: Pick<Session, "agentName" | "harness" | "parentSessionId"> | null | undefined,
+): boolean {
+  if (isClaudeNativeSession(conv)) return true;
+  if (session?.harness === "claude-native" || session?.harness === "claude-sdk") return true;
+  return shouldShowPollyClaudeGoalControl(session);
 }
 
 /** True for top-level Polly sessions running on the Claude SDK harness. */
