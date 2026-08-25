@@ -578,6 +578,17 @@ function rowPaddingLeft(depth: number): number {
   return ROW_BASE_PADDING_PX + (depth - 1) * ROW_DEPTH_STEP_PX;
 }
 
+function defaultModelForChild(child: ChildSessionInfo): string | null {
+  const tool = child.tool?.toLowerCase();
+  if (tool === "claude_code" || tool === "claude") return "opus";
+  if (tool === "codex") return "gpt-5.6-luna";
+  if (tool === "agy") return "gemini-3.7-flash";
+  if (tool === "opencode") return "opencode";
+  if (tool === "cursor") return "cursor";
+  if (tool === "pi") return "pi";
+  return null;
+}
+
 function SubagentRow({
   child,
   depth,
@@ -599,14 +610,20 @@ function SubagentRow({
   const Icon = brandChildIcon(child) ?? iconForAgentType(child.tool);
   const primary = childPrimaryLabel(child);
   const isActive = conversationId === child.id;
-  const effectiveModel = child.model_override ?? child.routed_model;
+  const effectiveModel =
+    child.model_override ??
+    child.routed_model ??
+    child.reported_model ??
+    defaultModelForChild(child);
   const modelLabel = effectiveModel ? shortModelName(formatModelDisplayName(effectiveModel)) : null;
   const effortLabel = child.reasoning_effort;
   const modelEffortTitle = [
     effectiveModel
       ? child.model_override
         ? `Model: ${effectiveModel}`
-        : `Smart routing picked ${effectiveModel}`
+        : child.routed_model
+          ? `Smart routing picked ${effectiveModel}`
+          : `Model: ${effectiveModel}`
       : null,
     effortLabel ? `Reasoning effort: ${effortLabel}` : null,
   ]
