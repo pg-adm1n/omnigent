@@ -8,7 +8,6 @@ import {
   shouldShowEffortPicker,
   shouldShowGoalControl,
   shouldShowModelPicker,
-  shouldShowClaudeGoalControl,
   shouldShowPollyClaudeGoalControl,
   shouldShowPollyCodexGoalControl,
 } from "./ChatPage";
@@ -261,37 +260,6 @@ describe("shouldShowGoalControl", () => {
     );
     expect(shouldShowGoalControl({ labels: {} })).toBe(false);
     expect(shouldShowGoalControl(null)).toBe(false);
-  });
-});
-
-describe("shouldShowClaudeGoalControl", () => {
-  it("returns true for Claude-native sessions, subagents, and top-level Polly Claude SDK", () => {
-    expect(
-      shouldShowClaudeGoalControl({
-        labels: { "omnigent.wrapper": "claude-code-native-ui" },
-      }),
-    ).toBe(true);
-    expect(
-      shouldShowClaudeGoalControl(null, {
-        agentName: "claude_code",
-        harness: "claude-native",
-        parentSessionId: "conv_parent",
-      }),
-    ).toBe(true);
-    expect(
-      shouldShowClaudeGoalControl(null, {
-        agentName: "polly",
-        harness: "claude-sdk",
-        parentSessionId: null,
-      }),
-    ).toBe(true);
-    expect(
-      shouldShowClaudeGoalControl({ labels: { "omnigent.wrapper": "codex-native-ui" } }, {
-        agentName: "codex",
-        harness: "codex-native",
-        parentSessionId: null,
-      }),
-    ).toBe(false);
   });
 });
 
