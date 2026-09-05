@@ -189,6 +189,35 @@ def pi_supports_approve(executable: str) -> bool:
     return ver >= (0, 79, 0)
 
 
+def pi_supports_append_system_prompt(executable: str) -> bool:
+    """Return ``True`` when the Pi CLI at *executable* supports ``--append-system-prompt``.
+
+    Probed from ``pi --help`` rather than a version floor: the flag's
+    introduction version isn't pinned anywhere, and passing it to a Pi that
+    lacks it produces an "Unknown option" error with an immediate exit —
+    so a wrong version guess breaks launches outright. ``--help`` is fast
+    and definitive.
+
+    Fails open — returns ``False`` on any probe error so an older Pi keeps
+    working (without the agent identity prompt) instead of failing to launch.
+
+    :param executable: Resolved path to the Pi CLI.
+    :returns: ``True`` iff ``--append-system-prompt`` appears in help output.
+    """
+    import subprocess
+
+    try:
+        result = subprocess.run(
+            [executable, "--help"],
+            capture_output=True,
+            text=True,
+            timeout=10.0,
+        )
+    except Exception:  # noqa: BLE001
+        return False
+    return "append-system-prompt" in (result.stdout + result.stderr)
+
+
 def build_pi_launch(
     pi_args: Sequence[str],
     *,

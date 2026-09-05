@@ -1880,6 +1880,7 @@ def _build_pi_native_args(
     session_dir: Path,
     external_session_id: str | None,
     approve: bool = False,
+    append_system_prompt: str | None = None,
 ) -> list[str]:
     """
     Build Pi CLI args for a runner-owned native TUI session.
@@ -1890,6 +1891,11 @@ def _build_pi_native_args(
     :param external_session_id: Captured Pi session id, if any.
     :param approve: When ``True``, pass ``--approve`` to pre-accept Pi's
         project-folder trust dialog (supported from Pi 0.79+).
+    :param append_system_prompt: Raw agent-spec instructions text for Pi's
+        native ``--append-system-prompt`` flag (mirrors claude-native's
+        startup-additive channel). ``None`` adds nothing. Pi accepts the flag
+        multiple times, so a user-passed occurrence in
+        ``terminal_launch_args`` never conflicts — both apply.
     :returns: Complete Pi arg vector excluding the executable.
     """
     user_args = list(terminal_launch_args or [])
@@ -1900,6 +1906,8 @@ def _build_pi_native_args(
         # resources. In a web-UI-driven session there is nobody at the
         # terminal to answer it — mirroring ensure_claude_workspace_trusted.
         args.append("--approve")
+    if append_system_prompt:
+        args.extend(["--append-system-prompt", append_system_prompt])
     if not _pi_args_have_session_control(user_args):
         args.extend(["--session-dir", str(session_dir)])
         if external_session_id:
@@ -2166,14 +2174,30 @@ async def _auto_create_pi_terminal(
         workspace=launch_config.workspace,
         server_client=server_client,
     )
-    from omnigent.pi_native import pi_supports_approve
+    from omnigent.pi_native import pi_supports_append_system_prompt, pi_supports_approve
 
+    # Identity prompt via Pi's native startup-additive channel (parity with
+    # claude-native's ``--append-system-prompt``): without this a composed
+    # bundle agent (e.g. agile_pm) boots as a bare Pi CLI and answers with
+    # its default model identity. Gated on flag support — an older Pi exits
+    # immediately on unknown options, so never pass it blind.
+    pi_system_prompt = _native_startup_raw_instructions_from_spec(agent_spec)
+    if pi_system_prompt and not pi_supports_append_system_prompt(pi_command):
+        _logger.warning(
+            "agent instructions not delivered for session=%s: "
+            "installed Pi lacks --append-system-prompt (upgrade Pi); "
+            "the session runs with Pi's default identity",
+            session_id,
+            extra={"session_id": session_id},
+        )
+        pi_system_prompt = None
     pi_args = _build_pi_native_args(
         terminal_launch_args=launch_config.terminal_launch_args,
         extension_path=pi_extension,
         session_dir=session_dir,
         external_session_id=resume_session_id,
         approve=pi_supports_approve(pi_command),
+        append_system_prompt=pi_system_prompt,
     )
     pi_env = {
         PI_NATIVE_CONFIG_ENV_VAR: str(config),
