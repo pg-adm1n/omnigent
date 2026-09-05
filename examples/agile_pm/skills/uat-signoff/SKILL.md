@@ -37,3 +37,4 @@ Follow this procedure for the final business acceptance validation and PO delive
        - Link to open PR(s).
      - Present the completed deliverable and PR to the Product Owner (PO) for final review and merge.
      - **REMINDER**: The Agile PM orchestrator never merges PRs directly; merging is reserved for the PO.
+     - Once the PO confirms the merge, clean up: `git worktree remove <repo>/.worktrees/<task_id> --force`, `git worktree prune`, and delete the merged task branch. Never remove a worktree whose PR is still open.

@@ -11,8 +11,9 @@ Follow this procedure for implementing approved sprint tasks and running the SIT
 
 ### Step 5: Development & Unit Testing
 1. For each approved Developer Task Packet from the sprint backlog:
-   - Create an isolated git worktree for the task:
-     `git worktree add .worktrees/<task_id> -b task/<task_id>`
+   - Create an isolated git worktree at an ABSOLUTE path:
+     `git worktree add <repo>/.worktrees/<task_id> -b task/<task_id>`
+     (run `git rev-parse --show-toplevel` first so `<repo>` is absolute).
 2. Dispatch Developer (`dev` — Teammate A) via `sys_session_send`:
    ```yaml
    sys_session_send(
@@ -20,10 +21,12 @@ Follow this procedure for implementing approved sprint tasks and running the SIT
      title="dev-<task_id>",
      args={
        purpose: "implement",
-       input: "<Task packet details, worktree path .worktrees/<task_id>, Architect technical design, and BA acceptance criteria. Implement code and unit tests, drive unit tests to green, commit with 'Co-authored-by: omnigent <noreply@omnigent.ai>', and open PR via gh pr create.>"
+       input: "<Task packet details, ABSOLUTE worktree path <repo>/.worktrees/<task_id> (cd there first and verify with pwd), Architect technical design, and BA acceptance criteria. Implement code and unit tests, drive unit tests to green, commit with 'Co-authored-by: omnigent <noreply@omnigent.ai>', and open PR via gh pr create.>"
      }
    )
    ```
+   Dev shares your cwd by default — a relative worktree path WILL pollute
+   the main checkout.
 3. Emit the dispatch in the SAME turn; then end your turn.
 4. Collect the Dev completion report with `sys_read_inbox`.
 5. Update `.agile-pm/sprint.json` with the PR URL and task implementation status.
@@ -36,7 +39,7 @@ Follow this procedure for implementing approved sprint tasks and running the SIT
      title="sit-<task_id>",
      args={
        purpose: "review",
-       input: "<Dev PR diff, Architect specification, and BA Acceptance Criteria. Run system integration test suites, verify end-to-end flows, and report structured defects (blocking, non-blocking, test_failures). Do not edit code.>"
+       input: "<Dev PR URL + branch, ABSOLUTE worktree path <repo>/.worktrees/<task_id>, Architect specification, and BA Acceptance Criteria. cd to the worktree path FIRST (it has the PR branch checked out) and run the system integration test suites THERE — the main checkout does not contain the unmerged code. Verify end-to-end flows and report structured defects (blocking, non-blocking, test_failures). Do not edit code.>"
      }
    )
    ```
@@ -50,6 +53,12 @@ Follow this procedure for implementing approved sprint tasks and running the SIT
        - Dev applies fixes, re-runs unit tests to green, commits with the co-authored trailer, and pushes updates.
        - Re-dispatch `sit` to re-verify integration tests.
        - Repeat until SIT reports 0 blocking defects and 0 test failures.
+     - **Loop cap (anti-spin)**: at most 3 dev→sit rounds per task. If the
+       3rd SIT re-verification still reports blocking defects, STOP looping:
+       record the deadlock in `.agile-pm/sprint.json` and escalate to the PO
+       with the defect list, dev's fix attempts, and options (descope, send
+       back to `architect` for redesign, or accept with follow-ups). Never
+       burn a 4th round without explicit PO approval.
      - If all integration tests are green and 0 blocking defects remain:
        - Mark task technical verification passed in `.agile-pm/sprint.json`.
        - Proceed to Step 7 (`uat-signoff`).

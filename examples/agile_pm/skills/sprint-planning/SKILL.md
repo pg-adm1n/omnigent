@@ -15,6 +15,9 @@ Follow this procedure to plan a sprint before writing code or creating worktrees
    - Sprint metadata (`sprint_id`, `name`, `status: "planning"`)
    - High-level business goal and raw feature description
    - Initial backlog item records.
+3. Keep the repo clean: ensure `.gitignore` covers `.agile-pm/` and
+   `.worktrees/` (append if missing) so sprint state and task checkouts
+   never leak into commits or PRs.
 
 ### Step 2: User Story & Acceptance Criteria Generation
 1. Dispatch the Business Analyst (`ba`) sub-agent via `sys_session_send`:
