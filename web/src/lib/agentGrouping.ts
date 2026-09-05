@@ -24,6 +24,7 @@ export const BUILTIN_AGENTS = new Set([
   "kimi-native-ui", // Kimi
   "polly",
   "debby",
+  "agile_pm",
 ]);
 
 // Fallback only: builtin ACP CLI harness ids for servers whose harness catalog
@@ -71,6 +72,7 @@ export const AGENT_DISPLAY_ORDER = [
   "Kimi",
   "Polly",
   "Debby",
+  "Agile PM",
 ];
 
 function displayRank(name: string): number {

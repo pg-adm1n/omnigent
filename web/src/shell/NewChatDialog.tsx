@@ -260,7 +260,7 @@ const AGENT_PICKER_DESCRIPTIONS: Record<string, string> = {
 // Agents whose bundled skills render as always-visible pills under the
 // landing composer. Deliberately an allowlist while the pattern proves
 // out — other agents keep the "/" menu as the only skill surface.
-const SKILL_PILL_AGENTS = new Set(["polly", "debby"]);
+const SKILL_PILL_AGENTS = new Set(["polly", "debby", "agile_pm"]);
 
 function createdHarnessOptions({
   harness,

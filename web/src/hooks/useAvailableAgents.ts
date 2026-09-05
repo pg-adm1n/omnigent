@@ -58,13 +58,18 @@ const DISPLAY_NAMES: Record<string, string> = {
   nessie: "Nessie",
   polly: "Polly",
   debby: "Debby",
+  agile_pm: "Agile PM",
 };
 
 function displayNameForAgent(name: string, harness?: string | null): string {
+  // Name first: a composed agent running ON a native harness (e.g. agile_pm
+  // on pi-native) must not steal the vendor's display name. Raw harness rows
+  // resolve identically via the name table, so the harness stays as the
+  // fallback for legacy spellings only.
   return (
-    nativeCodingAgentForHarness(harness)?.displayName ??
     nativeCodingAgentForAgentName(name)?.displayName ??
     DISPLAY_NAMES[name] ??
+    nativeCodingAgentForHarness(harness)?.displayName ??
     capitalizeAgentName(name)
   );
 }

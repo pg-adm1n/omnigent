@@ -324,11 +324,23 @@ export function nativeCodingAgentForSubagentWrapper(
   return wrapper == null ? undefined : BY_SUBAGENT_WRAPPER.get(wrapper);
 }
 
+// Composed orchestrator bundles: they RUN ON a native harness but ARE NOT
+// the vendor CLI. Resolving them via harness would file them under Harnesses
+// (or dedupe them away against the raw *-ui row), steal the vendor display
+// name, and stamp vendor wrapper labels onto the sessions they create.
+// polly/debby are safe by luck (claude-sdk has no harness entry); agile_pm
+// on pi-native is the case that needs the guard. Custom single-CLI wrappers
+// (e.g. a "my-pi" row) keep the harness fallback intentionally.
+export const COMPOSED_BUNDLE_AGENTS = new Set(["polly", "debby", "agile_pm"]);
+
 export function nativeCodingAgentForAvailableAgent(
   agent: Pick<AvailableAgent, "name" | "harness"> | null | undefined,
 ): NativeCodingAgentSpec | undefined {
   if (agent == null) return undefined;
-  return nativeCodingAgentForHarness(agent.harness) ?? nativeCodingAgentForAgentName(agent.name);
+  const byName = nativeCodingAgentForAgentName(agent.name);
+  if (byName !== undefined) return byName;
+  if (agent.name != null && COMPOSED_BUNDLE_AGENTS.has(agent.name)) return undefined;
+  return nativeCodingAgentForHarness(agent.harness);
 }
 
 export function isNativeCodingAgent(
