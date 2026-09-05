@@ -15,6 +15,7 @@ import pytest
 
 from omnigent.inner.nessie.policies import (
     blast_radius,
+    coerce_stringified_child_args,
     headless_subagent_purpose_guard,
     read_only_os,
     spawn_bounds,
@@ -350,6 +351,64 @@ def test_headless_subagent_purpose_guard_requires_explicit_purpose(
 
     decision = evaluate(_tool_call("sys_session_send", agent="claude_code", args=child_args))
     assert _result(decision) == expected
+
+
+@pytest.mark.parametrize(
+    "child_args,expected",
+    [
+        # Stringified object form: some models serialize nested args as a
+        # string containing JSON. Purpose inside still classifies.
+        ('{"input": "Explore the relevant code.", "purpose": "explore"}', "ALLOW"),
+        ('{"input": "Review this diff.", "purpose": "review"}', "ALLOW"),
+        # Stringified but purposeless, not an object, or a bare string: DENY.
+        ('{"input": "Work on issue 1425."}', "DENY"),
+        ('["implement"]', "DENY"),
+        ('"just a string"', "DENY"),
+        ("Do the thing.", "DENY"),
+        ("", "DENY"),
+        (None, "DENY"),
+    ],
+)
+def test_headless_subagent_purpose_guard_coerces_stringified_args(
+    child_args: Any,
+    expected: str,
+) -> None:
+    """
+    A stringified ``{"input", "purpose"}`` object must ALLOW like the
+    object form — models behind some harnesses serialize nested args as a
+    string, and denying a well-declared dispatch burns a turn for a wire
+    encoding detail. Anything that cannot yield a purpose still DENYs.
+    """
+    evaluate = headless_subagent_purpose_guard()
+
+    decision = evaluate(_tool_call("sys_session_send", agent="ba", args=child_args))
+    assert _result(decision) == expected
+
+
+@pytest.mark.parametrize(
+    "raw,expected",
+    [
+        ({"purpose": "review"}, {"purpose": "review"}),
+        ('{"input": "x", "purpose": "review"}', {"input": "x", "purpose": "review"}),
+        ('{"purpose": "review"}', {"purpose": "review"}),
+        ("plain task text", None),
+        ('{"input": "x"}', {"input": "x"}),
+        ('{"model": "y"}', None),
+        ("[1, 2]", None),
+        ("42", None),
+        ("", None),
+        (None, None),
+        (42, None),
+    ],
+)
+def test_coerce_stringified_child_args(raw: Any, expected: Any) -> None:
+    """Only a string parsing to a dict with input/purpose coerces.
+
+    The ``{"model": "y"}`` case stays ``None`` on purpose: coercing a
+    metadata-only object without ``input`` would turn a literal task string
+    into an undeliverable payload downstream.
+    """
+    assert coerce_stringified_child_args(raw) == expected
 
 
 def test_headless_subagent_purpose_guard_honors_custom_allowed_purposes() -> None:

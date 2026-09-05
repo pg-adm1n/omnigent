@@ -9,6 +9,7 @@ The evaluators run runner-side at tool dispatch
 
 from __future__ import annotations
 
+import json
 import posixpath
 import re
 import shlex
@@ -479,6 +480,43 @@ def spawn_bounds(
     return _evaluate
 
 
+def coerce_stringified_child_args(raw: Any) -> _Json | None:
+    """Normalize a ``sys_session_send`` child-``args`` payload to an object.
+
+    Some models serialize the whole ``args`` value as a *string containing
+    JSON* (``"{\\"input\\": ...}"``) instead of emitting a nested object —
+    the schema's ``anyOf: [string, object]`` plus its "plain string for the
+    normal contract" wording invites exactly this. A stringified object is
+    neither a usable message (downstream would deliver the raw JSON text as
+    the task) nor classifiable (the purpose guard sees no dict), so coerce
+    it back to the object the model meant.
+
+    Coercion is conservative: only a string that parses to a dict carrying
+    ``"input"`` or ``"purpose"`` is converted. A plain task string (or a
+    JSON scalar/array, or an object without either key) returns ``None`` so
+    callers keep their existing string/none handling untouched.
+
+    Shared by the purpose guard (classify) and the dispatch path (deliver)
+    so both layers agree on what the model sent.
+
+    :param raw: The ``args`` value from the tool call — dict, string, or other.
+    :returns: The object form, or ``None`` when there is none to recover.
+    """
+    if isinstance(raw, dict):
+        return raw
+    if not isinstance(raw, str):
+        return None
+    try:
+        parsed = json.loads(raw)
+    except ValueError:
+        return None
+    if not isinstance(parsed, dict):
+        return None
+    if "input" not in parsed and "purpose" not in parsed:
+        return None
+    return parsed
+
+
 def headless_subagent_purpose_guard(
     *,
     allowed_purposes: tuple[str, ...] = ("implement", "review", "explore", "search"),
@@ -517,9 +555,18 @@ def headless_subagent_purpose_guard(
         args = _tool_call(event, {"sys_session_send"})
         if args is None:
             return _ALLOW
-        child_args = args.get("args")
-        if not isinstance(child_args, dict):
-            return _decision("DENY", f"{deny_reason} Missing object args with purpose.")
+        # Accept a stringified object ("{\"input\": ...}") as the object
+        # form — some models serialize nested args as a string. A bare
+        # string or anything else still denies: purpose must be machine-
+        # readable, not embedded in prose.
+        child_args = coerce_stringified_child_args(args.get("args"))
+        if child_args is None:
+            return _decision(
+                "DENY",
+                f"{deny_reason} Missing object args with purpose "
+                "(a JSON string is not an object — emit args as a nested "
+                "{input, purpose} object, not a quoted string).",
+            )
         purpose = child_args.get("purpose")
         if not isinstance(purpose, str) or purpose not in allowed:
             return _decision(

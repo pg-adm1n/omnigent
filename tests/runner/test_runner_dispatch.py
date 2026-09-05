@@ -11330,3 +11330,48 @@ def test_response_failed_event_llm_source_is_preserved() -> None:
     )
     payload = _json.loads(raw.decode().split("data: ", 1)[1])
     assert payload["source"] == "llm"
+
+
+# ---------------------------------------------------------------------------
+# Unit tests for stringified sub-agent args normalization
+# ---------------------------------------------------------------------------
+
+
+def test_normalized_subagent_tool_args_coerces_stringified_object() -> None:
+    """A stringified ``{"input", "purpose", ...}`` becomes the object form.
+
+    Regression: models behind some harnesses serialize nested ``args`` as a
+    string containing JSON. Without normalization the purpose guard denies
+    the dispatch AND the message extractor would deliver the raw JSON text
+    as the task. After normalization every extractor sees the object.
+    """
+    from omnigent.runner.tool_dispatch import (
+        _normalized_subagent_tool_args,
+        _subagent_message_from_args,
+        _subagent_model_from_args,
+        _subagent_reasoning_effort_from_args,
+    )
+
+    raw = {
+        "agent": "ba",
+        "title": "story1",
+        "args": '{"input": "Draft stories.", "purpose": "story", "model": "opus-5"}',
+    }
+    normalized = _normalized_subagent_tool_args(raw)
+    assert normalized["args"] == {"input": "Draft stories.", "purpose": "story", "model": "opus-5"}
+    assert _subagent_message_from_args(normalized) == "Draft stories."
+    assert _subagent_model_from_args(normalized) == "opus-5"
+    # Effort absent -> None (no crash on the coerced shape).
+    assert _subagent_reasoning_effort_from_args(normalized) is None
+
+
+def test_normalized_subagent_tool_args_leaves_plain_strings() -> None:
+    """The normal string contract passes through untouched."""
+    from omnigent.runner.tool_dispatch import (
+        _normalized_subagent_tool_args,
+        _subagent_message_from_args,
+    )
+
+    raw = {"agent": "ba", "title": "story1", "args": "Draft stories."}
+    assert _normalized_subagent_tool_args(raw) == raw
+    assert _subagent_message_from_args(raw) == "Draft stories."

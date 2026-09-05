@@ -1181,6 +1181,30 @@ class _SubagentLabel:
     title: str | None
 
 
+def _normalized_subagent_tool_args(args: _JsonObject) -> _JsonObject:
+    """Normalize a stringified object ``args`` to the object form.
+
+    Some models serialize nested ``args`` as a string containing JSON
+    (``"{\\"input\\": ...}"``). Without normalization the purpose guard
+    denies the dispatch AND downstream extractors would deliver the raw JSON
+    text as the task. Coercion up front makes every extractor below
+    (message, model, effort, file_ids, harness, budget) see the same shape
+    the purpose guard classified. Plain strings pass through untouched
+    (normal contract).
+
+    :param args: Parsed ``sys_session_send`` arguments.
+    :returns: ``args`` with a coerced object ``args`` value, or ``args``
+        unchanged when there is nothing to coerce.
+    """
+    # Lazy import: policies must not be imported at module load (cycle).
+    from omnigent.policies.builtins.orchestration import coerce_stringified_child_args
+
+    coerced = coerce_stringified_child_args(args.get("args"))
+    if coerced is None:
+        return args
+    return {**args, "args": coerced}
+
+
 def _subagent_label(child: _JsonObject) -> _SubagentLabel:
     """
     Extract child identity fields from a child-session summary.
@@ -2123,6 +2147,8 @@ async def _execute_subagent_tool(
     """
     # Lazy import to avoid circular dependency at module load.
     from omnigent.runner import app as _runner_app
+
+    args = _normalized_subagent_tool_args(args)
 
     message = _subagent_message_from_args(args)
     if message is None or not message.strip():
