@@ -1808,6 +1808,51 @@ def test_ensure_default_debby_agent_skips_when_bundle_absent(
     assert seed_stores.agent_store.get_by_name(server_app._DEBBY_AGENT_NAME) is None
 
 
+def test_ensure_default_agile_pm_agent_seeds_card(seed_stores: _SeedStores) -> None:
+    """
+    Seeding registers agile_pm as a built-in the picker can render.
+
+    The new-session picker reads built-ins from ``GET /v1/agents`` and
+    renders each as a card; this is what makes agile_pm launchable next
+    to Claude Code, Codex, and polly. The deeper refresh/idempotency
+    behavior lives in the shared ``_ensure_builtin_agent`` and is
+    covered by the polly tests above — this verifies agile_pm's wiring
+    (name constant, packaged bundle source) specifically.
+    """
+    server_app._ensure_default_agile_pm_agent(
+        seed_stores.agent_store,
+        seed_stores.artifact_store,
+        seed_stores.agent_cache,
+    )
+
+    seeded = seed_stores.agent_store.get_by_name(server_app._AGILE_PM_AGENT_NAME)
+    assert seeded is not None, "agile_pm was not registered"
+    assert seeded.name == "agile_pm"
+    # The bundle must be retrievable, not just referenced.
+    assert seed_stores.artifact_store.get(seeded.bundle_location) is not None
+
+
+def test_ensure_default_agile_pm_agent_skips_when_bundle_absent(
+    seed_stores: _SeedStores, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """
+    No bundle on disk → no card. Seeding is skipped, not errored.
+
+    On a deployment that didn't package the ``examples/agile_pm`` bundle,
+    seeding must skip silently so startup doesn't fail and no broken
+    card (an agent that can't launch here) appears.
+    """
+    monkeypatch.setattr(server_app, "_AGILE_PM_BUNDLE_SOURCE", tmp_path / "no-such-agile-pm")
+
+    server_app._ensure_default_agile_pm_agent(
+        seed_stores.agent_store,
+        seed_stores.artifact_store,
+        seed_stores.agent_cache,
+    )
+
+    assert seed_stores.agent_store.get_by_name(server_app._AGILE_PM_AGENT_NAME) is None
+
+
 def _build_api_only_app(db_uri: str, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> FastAPI:
     """Build an app with the web UI bundle ABSENT (the API-only branch).
 

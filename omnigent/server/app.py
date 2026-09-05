@@ -260,6 +260,7 @@ _WEB_UI_API_FALLBACK_PREFIXES = frozenset({"api", "auth", "health", "v1", ".well
 # older desktop shell.
 WELL_KNOWN_MANIFEST_VERSION = 1
 _WEB_UI_GZIP_MINIMUM_SIZE = 1024
+_AGILE_PM_AGENT_NAME = "agile_pm"
 _DEBBY_AGENT_NAME = "debby"
 _POLLY_AGENT_NAME = "polly"
 _UNMATCHED_ROUTE_TEMPLATE = "<unmatched>"
@@ -304,12 +305,15 @@ def _error_audit_extra(
     )
 
 
-# polly's and debby's multi-file bundles are packaged under
+# agile_pm's, polly's, and debby's multi-file bundles are packaged under
 # omnigent.resources.examples (see pyproject package-data), so they resolve
 # in both a repo checkout and an installed wheel. The presence check in each
 # seeder is a safety net.
 # resolve_repo_symlink dereferences the packaged symlink on a no-symlink
 # Windows checkout (where Git leaves it as a stub text file); a no-op elsewhere.
+_AGILE_PM_BUNDLE_SOURCE = resolve_repo_symlink(
+    Path(_examples_resources.__file__).parent / "agile_pm"
+)
 _DEBBY_BUNDLE_SOURCE = resolve_repo_symlink(Path(_examples_resources.__file__).parent / "debby")
 _POLLY_BUNDLE_SOURCE = resolve_repo_symlink(Path(_examples_resources.__file__).parent / "polly")
 
@@ -674,6 +678,7 @@ def _ensure_default_agents(
     """
     _ensure_default_native_agents(agent_store, artifact_store, agent_cache)
     _ensure_default_acp_agents(agent_store, artifact_store, agent_cache)
+    _ensure_default_agile_pm_agent(agent_store, artifact_store, agent_cache)
     _ensure_default_debby_agent(agent_store, artifact_store, agent_cache)
     _ensure_default_polly_agent(agent_store, artifact_store, agent_cache)
     _ensure_extra_builtin_agents(agent_store, artifact_store, agent_cache)
@@ -943,6 +948,63 @@ def _ensure_default_acp_agents(
             name=key,
             bundle_bytes=_build_acp_bundle(harness=key, name=key),
         )
+
+
+def _build_agile_pm_bundle() -> bytes:
+    """
+    Build a gzipped tarball of the ``examples/agile_pm`` agent bundle.
+
+    agile_pm is a multi-file image (``config.yaml`` plus ``agents/`` and
+    ``skills/`` subdirectories), so the source is the directory itself
+    rather than a generated single YAML.
+
+    :returns: Gzipped tarball bytes suitable for the artifact store.
+    """
+    import tempfile
+
+    from omnigent.spec import materialize_bundle
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        bundle_dir = materialize_bundle(_AGILE_PM_BUNDLE_SOURCE, Path(tmpdir) / "bundle")
+        return _tar_gz_dir(bundle_dir)
+
+
+def _ensure_default_agile_pm_agent(
+    agent_store: AgentStore,
+    artifact_store: ArtifactStore,
+    agent_cache: Any,
+) -> None:
+    """
+    Register the agile_pm orchestrator agent if its bundle ships here.
+
+    agile_pm is the multi-agent agile sprint orchestrator; seeding it lets
+    the Web UI's new-session picker offer it as a host-launchable card next
+    to Claude Code, Codex, and polly. When the bundle is absent (generic
+    deployment that didn't package it), seeding is skipped so no card is
+    offered for an agent that can't be launched here — mirroring the
+    ``_WEB_UI_DIST`` "asset present → enable feature" pattern. Content-aware
+    via :func:`_ensure_builtin_agent`: when a new wheel ships a changed
+    agile_pm spec, the existing row is refreshed in place instead of
+    being ignored.
+
+    :param agent_store: Store for agent metadata.
+    :param artifact_store: Store for agent bundles.
+    :param agent_cache: Cache for loaded agent specs.
+    """
+    if not (_AGILE_PM_BUNDLE_SOURCE / "config.yaml").is_file():
+        _logger.debug(
+            "agile_pm bundle not found at %s; skipping seed",
+            _AGILE_PM_BUNDLE_SOURCE,
+        )
+        return
+
+    _ensure_builtin_agent(
+        agent_store,
+        artifact_store,
+        agent_cache,
+        name=_AGILE_PM_AGENT_NAME,
+        bundle_bytes=_build_agile_pm_bundle(),
+    )
 
 
 def _build_debby_bundle() -> bytes:

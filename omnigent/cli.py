@@ -1688,6 +1688,8 @@ def _print_version_callback(ctx: click.Context, _param: click.Parameter, value: 
 # decorated below.
 _HARNESS_COMMANDS: frozenset[str] = frozenset(
     {
+        "agile-pm",
+        "agile_pm",
         "agy",
         "antigravity",
         "claude",
@@ -1716,7 +1718,7 @@ _ACCENT_RGB = (244, 59, 166)
 # object registered under a second name, e.g. ``antigravity`` -> ``agy``).
 # Kept runnable/registered but omitted from the ``--help`` listing so the
 # alias isn't shown as a duplicate line.
-_ALIAS_COMMANDS: frozenset[str] = frozenset({"antigravity"})
+_ALIAS_COMMANDS: frozenset[str] = frozenset({"antigravity", "agile-pm"})
 
 
 def _harness_extra_checks() -> dict[str, Callable[[], bool]]:
@@ -2030,6 +2032,8 @@ def cli() -> None:
 # Keep in sync with ``@cli.command()`` decorations below.
 _CLICK_SUBCOMMANDS: frozenset[str] = frozenset(
     {
+        "agile-pm",
+        "agile_pm",
         "agy",
         "antigravity",
         "attach",
@@ -6005,6 +6009,34 @@ def debby(run_args: tuple[str, ...]) -> None:
       omnigent debby -p "name ideas for a CLI that runs agents"
     """
     _run_bundled_agent("debby", run_args)
+
+
+@cli.command(
+    "agile_pm",
+    context_settings={
+        "ignore_unknown_options": True,
+        "allow_extra_args": True,
+    },
+)
+@click.argument("run_args", nargs=-1, type=click.UNPROCESSED)
+def agile_pm(run_args: tuple[str, ...]) -> None:
+    # Param docs live in comments — Click uses the docstring for --help.
+    # :param run_args: Pass-through args for ``run``.
+    """Launch agile_pm, the bundled multi-agent agile sprint orchestrator.
+
+    Shorthand for ``omnigent run`` on the packaged agile_pm agent. All ``run``
+    options are accepted and forwarded.
+
+    \b
+    Examples:
+      omnigent agile_pm
+      omnigent agile_pm -p "implement user authentication"
+      omnigent agile_pm --server https://<app>.databricksapps.com
+    """
+    _run_bundled_agent("agile_pm", run_args)
+
+
+cli.add_command(agile_pm, name="agile-pm")
 
 
 @cli.command()

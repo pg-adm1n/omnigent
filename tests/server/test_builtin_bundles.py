@@ -36,6 +36,7 @@ _NATIVE_BUILDERS = [(agent.key, f"{agent.agent_name}.yaml") for agent in _NATIVE
 # Shipped-example built-ins keep their hand-written named builders. The bool is
 # whether the source is a shipped example a stripped deployment may omit.
 _EXAMPLE_BUILDERS = [
+    ("_build_agile_pm_bundle", "config.yaml", True),
     ("_build_debby_bundle", "config.yaml", True),
     ("_build_polly_bundle", "config.yaml", True),
 ]
@@ -44,10 +45,11 @@ _EXAMPLE_BUILDERS = [
 def _shipped_example_missing(builder: str) -> bool:
     """Return True when ``builder``'s shipped-example source is not packaged here.
 
-    debby/polly are only seeded when their bundle ships with the wheel; a
+    agile_pm/debby/polly are only seeded when their bundle ships with the wheel; a
     generic deployment legitimately omits them. Skip rather than fail there.
     """
     source = {
+        "_build_agile_pm_bundle": app._AGILE_PM_BUNDLE_SOURCE,
         "_build_debby_bundle": app._DEBBY_BUNDLE_SOURCE,
         "_build_polly_bundle": app._POLLY_BUNDLE_SOURCE,
     }[builder]
@@ -131,6 +133,7 @@ def test_bundle_builder_is_reproducible(
 
 # (name, bundle source dir, sub-agents the shipped definition declares today)
 _SHIPPED_SUB_AGENT_EXAMPLES = [
+    ("agile_pm", app._AGILE_PM_BUNDLE_SOURCE, {"ba", "architect", "dev", "sit"}),
     (
         "polly",
         app._POLLY_BUNDLE_SOURCE,
