@@ -194,6 +194,11 @@ def test_orchestrator_prompts_and_contracts(agile_pm_spec: AgentSpec) -> None:
     assert "Co-authored-by: omnigent <noreply@omnigent.ai>" in config_compact
     assert "Co-authored-by: omnigent <noreply@omnigent.ai>" in execution_text
 
+    # Parallel fan-out (per-task worktrees + dispatches, out-of-order inbox)
+    execution_compact = " ".join(execution_text.split())
+    assert "IN PARALLEL" in execution_compact
+    assert "OUT OF ORDER" in execution_compact
+
     # Roster preflight
     assert "command -v pi claude agy codex gh git || true" in config_compact
 

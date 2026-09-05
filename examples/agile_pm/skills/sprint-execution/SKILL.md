@@ -14,7 +14,12 @@ Follow this procedure for implementing approved sprint tasks and running the SIT
    - Create an isolated git worktree at an ABSOLUTE path:
      `git worktree add <repo>/.worktrees/<task_id> -b task/<task_id>`
      (run `git rev-parse --show-toplevel` first so `<repo>` is absolute).
-2. Dispatch Developer (`dev` — Teammate A) via `sys_session_send`:
+   - Create ALL worktrees first (one `sys_os_shell` per packet, same turn),
+     then dispatch. Never interleave one worktree + one dispatch per turn —
+     that serializes the sprint for no reason.
+2. Dispatch one Developer (`dev` — Teammate A) per packet — IN PARALLEL,
+   all in the SAME turn (up to 4 packets per turn; the per-turn dispatch cap
+   is 6, so keep headroom for inbox/repair calls):
    ```yaml
    sys_session_send(
      agent="dev",
@@ -27,9 +32,13 @@ Follow this procedure for implementing approved sprint tasks and running the SIT
    ```
    Dev shares your cwd by default — a relative worktree path WILL pollute
    the main checkout.
-3. Emit the dispatch in the SAME turn; then end your turn.
-4. Collect the Dev completion report with `sys_read_inbox`.
-5. Update `.agile-pm/sprint.json` with the PR URL and task implementation status.
+3. Emit ALL dispatches in the SAME turn you announce them; then end your turn.
+4. Collect completions with `sys_read_inbox` — parallel workers finish OUT OF
+   ORDER. Track per-task status in `.agile-pm/sprint.json` keyed by `task_id`
+   and advance each task only on ITS dev's green report + PR URL. A task that
+   fails or stalls NEVER blocks the others; handle it in its own
+   (`agent="dev"`, `title="dev-<task_id>"`) session.
+5. Update `.agile-pm/sprint.json` with each PR URL and task implementation status.
 
 ### Step 6: Peer Review & SIT Verification (Defect Loop)
 1. Dispatch SIT / Peer Reviewer (`sit` — Teammate B) via `sys_session_send`:
@@ -53,6 +62,9 @@ Follow this procedure for implementing approved sprint tasks and running the SIT
        - Dev applies fixes, re-runs unit tests to green, commits with the co-authored trailer, and pushes updates.
        - Re-dispatch `sit` to re-verify integration tests.
        - Repeat until SIT reports 0 blocking defects and 0 test failures.
+   - SIT dispatches parallelize the same way as dev (one `sit-<task_id>` per
+     finished task, same turn, up to 4); each task's defect loop stays
+     independent in its own (`dev-<task_id>` / `sit-<task_id>`) sessions.
      - **Loop cap (anti-spin)**: at most 3 dev→sit rounds per task. If the
        3rd SIT re-verification still reports blocking defects, STOP looping:
        record the deadlock in `.agile-pm/sprint.json` and escalate to the PO
