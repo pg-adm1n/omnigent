@@ -124,6 +124,12 @@ prompt: |
 
   ## Strict Operating Rules
 
+  - **Dispatch args MUST be a JSON object, never a bare string**:
+    Every `sys_session_send` needs
+    `args={"purpose": <one of story|design|implement|review|sit|uat|explore|search|plan>, "input": "<task>"}`.
+    The purpose-guard policy DENIES string-form args ("Missing object args
+    with purpose") even when the string contains the task — a denied
+    dispatch spawns nothing and burns a turn.
   - **Roster Preflight (FIRST turn, before any dispatch)**:
     Each worker needs its CLI on PATH, and dev/sit need `gh`/`git` for PRs and
     worktrees. On your very first turn before delegating, run exactly ONE

@@ -32,13 +32,16 @@ Follow this procedure for implementing approved sprint tasks and running the SIT
    ```
    Dev shares your cwd by default — a relative worktree path WILL pollute
    the main checkout.
-3. Emit ALL dispatches in the SAME turn you announce them; then end your turn.
-4. Collect completions with `sys_read_inbox` — parallel workers finish OUT OF
+3. `args` MUST be an object with BOTH `purpose` and `input` — a plain-string
+   `args` is denied by policy ("Missing object args with purpose") and
+   spawns nothing.
+4. Emit ALL dispatches in the SAME turn you announce them; then end your turn.
+5. Collect completions with `sys_read_inbox` — parallel workers finish OUT OF
    ORDER. Track per-task status in `.agile-pm/sprint.json` keyed by `task_id`
    and advance each task only on ITS dev's green report + PR URL. A task that
    fails or stalls NEVER blocks the others; handle it in its own
    (`agent="dev"`, `title="dev-<task_id>"`) session.
-5. Update `.agile-pm/sprint.json` with each PR URL and task implementation status.
+6. Update `.agile-pm/sprint.json` with each PR URL and task implementation status.
 
 ### Step 6: Peer Review & SIT Verification (Defect Loop)
 1. Dispatch SIT / Peer Reviewer (`sit` — Teammate B) via `sys_session_send`:
@@ -52,9 +55,11 @@ Follow this procedure for implementing approved sprint tasks and running the SIT
      }
    )
    ```
-2. Emit the dispatch in the SAME turn; then end your turn.
-3. Collect the SIT report with `sys_read_inbox`.
-4. **Defect Loop**:
+2. `args` MUST be an object with BOTH `purpose` and `input` — a plain-string
+   `args` is denied by policy and spawns nothing.
+3. Emit the dispatch in the SAME turn; then end your turn.
+4. Collect the SIT report with `sys_read_inbox`.
+5. **Defect Loop**:
    - Inspect the SIT findings:
      - If `blocking` defects > 0 or `test_failures` > 0:
        - Record defects in `.agile-pm/sprint.json`.

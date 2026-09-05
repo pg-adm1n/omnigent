@@ -21,9 +21,12 @@ Follow this procedure for the final business acceptance validation and PO delive
      }
    )
    ```
-2. Emit the dispatch in the SAME turn; then end your turn.
-3. Collect the BA UAT report with `sys_read_inbox`.
-4. Evaluate verdict:
+2. `args` MUST be an object with BOTH `purpose` and `input` — a plain-string
+   `args` is denied by policy ("Missing object args with purpose") and
+   spawns nothing.
+3. Emit the dispatch in the SAME turn; then end your turn.
+4. Collect the BA UAT report with `sys_read_inbox`.
+5. Evaluate verdict:
    - If `REJECTED`:
      - Record discrepancies in `.agile-pm/sprint.json`.
      - Route defects back to `sprint-execution` Defect Loop for remediation.

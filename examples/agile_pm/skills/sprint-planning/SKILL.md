@@ -31,9 +31,12 @@ Follow this procedure to plan a sprint before writing code or creating worktrees
      }
    )
    ```
-2. Emit the dispatch call in the SAME turn you announce it; then end your turn.
-3. Collect the BA story report with `sys_read_inbox`.
-4. Update `.agile-pm/sprint.json` with user story IDs and Gherkin Acceptance Criteria.
+2. `args` MUST be an object with BOTH `purpose` and `input` — a plain-string
+   `args` is denied by policy ("Missing object args with purpose") and
+   spawns nothing.
+3. Emit the dispatch call in the SAME turn you announce it; then end your turn.
+4. Collect the BA story report with `sys_read_inbox`.
+5. Update `.agile-pm/sprint.json` with user story IDs and Gherkin Acceptance Criteria.
 
 ### Step 3: Technical Architecture & Design Breakdown
 1. Dispatch the Software Architect (`architect`) sub-agent via `sys_session_send`:
@@ -47,9 +50,11 @@ Follow this procedure to plan a sprint before writing code or creating worktrees
      }
    )
    ```
-2. Emit the dispatch in the SAME turn; then end your turn.
-3. Collect the Architect design report with `sys_read_inbox`.
-4. Update `.agile-pm/sprint.json` with task breakdown packets, file scopes, and verification criteria.
+2. `args` MUST be an object with BOTH `purpose` and `input` — a plain-string
+   `args` is denied by policy and spawns nothing.
+3. Emit the dispatch in the SAME turn; then end your turn.
+4. Collect the Architect design report with `sys_read_inbox`.
+5. Update `.agile-pm/sprint.json` with task breakdown packets, file scopes, and verification criteria.
 
 ### Step 4: PO Plan Approval Gate
 1. Synthesize the complete sprint plan proposal:
