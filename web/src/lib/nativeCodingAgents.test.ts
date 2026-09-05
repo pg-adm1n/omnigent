@@ -11,6 +11,7 @@ import {
   isNativeWrapper,
   isRecentHarness,
   nativeAgentHasCapability,
+  nativeCodingAgentForAvailableAgent,
   nativeCodingAgentForHarness,
   nativeCodingAgentForPolicyName,
   nativeCodingAgentForSubagentWrapper,
@@ -95,6 +96,27 @@ describe("nativeCodingAgentForHarness", () => {
     expect(nativeCodingAgentForHarness("antigravity")).toBeUndefined();
     expect(nativeCodingAgentForHarness(null)).toBeUndefined();
     expect(nativeCodingAgentForHarness(undefined)).toBeUndefined();
+  });
+});
+
+describe("nativeCodingAgentForAvailableAgent", () => {
+  it("resolves raw harness rows by name", () => {
+    expect(nativeCodingAgentForAvailableAgent({ name: "pi-native-ui", harness: "pi-native" })?.key).toBe("pi");
+  });
+
+  it("keeps the harness fallback for custom single-CLI wrappers", () => {
+    // A custom row wrapping the Pi CLI is treated as native (terminal-first
+    // labels) — the fallback exists for exactly these rows.
+    expect(nativeCodingAgentForAvailableAgent({ name: "my-pi", harness: "pi-native" })?.key).toBe("pi");
+  });
+
+  it("never resolves a composed bundle agent via its runner harness", () => {
+    // agile_pm RUNS ON pi-native but IS NOT the Pi CLI: resolving it would
+    // file it under Harnesses (then dedupe it away), steal the Pi display
+    // name, and stamp Pi wrapper labels onto the sessions it creates.
+    for (const name of ["polly", "debby", "agile_pm"]) {
+      expect(nativeCodingAgentForAvailableAgent({ name, harness: "pi-native" })).toBeUndefined();
+    }
   });
 });
 
