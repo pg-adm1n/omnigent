@@ -1,10 +1,10 @@
 """Structural test for the Agile PM orchestrator bundle (examples/agile_pm).
 
 Agile PM manages agile development sprints across specialized sub-agents:
-- ``ba`` (Business Analyst - claude-sdk): story & Gherkin AC generation, UAT sign-off
-- ``architect`` (System Architect - claude-sdk): technical design, API/DB schemas, dev task breakdown
-- ``dev`` (Developer - claude-native): code & unit tests in worktree, PR creation
-- ``sit`` (SIT / Peer Reviewer - codex-native): cross-vendor review & integration tests, defect reporting
+- ``ba`` (Business Analyst - claude-native/opus-5): story & Gherkin AC generation, UAT sign-off
+- ``architect`` (System Architect - claude-native/opus-5): technical design, API/DB schemas, dev task breakdown
+- ``dev`` (Developer - antigravity-native/gemini-3.8-flash): code & unit tests in worktree, PR creation
+- ``sit`` (SIT / Peer Reviewer - codex-native/gpt-5.6-luna): cross-vendor review & integration tests, defect reporting
 
 Pure spec-load — no LLM, no credentials — modeled on ``test_example_polly.py``
 and ``test_example_debby.py``.
@@ -37,12 +37,13 @@ def agile_pm_spec() -> AgentSpec:
 
 
 def test_orchestrator_executor(agile_pm_spec: AgentSpec) -> None:
-    """The orchestrator runs on claude-sdk with a 1M window and no pinned model/profile."""
+    """The orchestrator runs on pi-native with a pinned model/effort and 1M window."""
     assert agile_pm_spec.name == "agile_pm"
     ex = agile_pm_spec.executor
-    assert ex.config.get("harness") == "claude-sdk"
+    assert ex.config.get("harness") == "pi-native"
     assert ex.config.get("smart_routing_harness") == "auto"
-    assert ex.model is None
+    assert ex.model == "muse-spark-1.3-contributor-free"
+    assert ex.reasoning_effort == "xhigh"
     assert ex.profile is None
     assert ex.context_window == 1000000
 
@@ -51,20 +52,29 @@ def test_agile_subagents(agile_pm_spec: AgentSpec) -> None:
     """The bundle has four specialized sub-agents with expected harnesses and configurations."""
     fam = {a.name: a.executor.config.get("harness") for a in agile_pm_spec.sub_agents}
     assert sorted(agile_pm_spec.tools.agents) == ["architect", "ba", "dev", "sit"]
-    assert fam["ba"] == "claude-sdk"
-    assert fam["architect"] == "claude-sdk"
-    assert fam["dev"] == "claude-native"
+    assert fam["ba"] == "claude-native"
+    assert fam["architect"] == "claude-native"
+    assert fam["dev"] == "antigravity-native"
     assert fam["sit"] == "codex-native"
 
     by_name = {a.name: a for a in agile_pm_spec.sub_agents}
 
-    # All sub-agents are unpinned
+    # Sub-agents pin model + effort; no auth profiles
+    assert by_name["ba"].executor.model == "opus-5"
+    assert by_name["ba"].executor.reasoning_effort == "xhigh"
+    assert by_name["architect"].executor.model == "opus-5"
+    assert by_name["architect"].executor.reasoning_effort == "xhigh"
+    assert by_name["dev"].executor.model == "gemini-3.8-flash"
+    assert by_name["dev"].executor.reasoning_effort == "high"
+    assert by_name["sit"].executor.model == "gpt-5.6-luna"
+    assert by_name["sit"].executor.reasoning_effort == "max"
     for name in ("ba", "architect", "dev", "sit"):
-        assert by_name[name].executor.model is None, name
         assert by_name[name].executor.profile is None, name
 
     # Headless / native permissions
-    assert by_name["dev"].executor.config.get("permission_mode") == "auto"
+    assert by_name["ba"].executor.config.get("permission_mode") == "auto"
+    assert by_name["architect"].executor.config.get("permission_mode") == "auto"
+    assert by_name["dev"].executor.config.get("permission_mode") == "bypassPermissions"
     assert by_name["sit"].executor.config.get("yolo") in (True, "True", "true")
 
     # Prompt role validation
@@ -185,7 +195,7 @@ def test_orchestrator_prompts_and_contracts(agile_pm_spec: AgentSpec) -> None:
     assert "Co-authored-by: omnigent <noreply@omnigent.ai>" in execution_text
 
     # Roster preflight
-    assert "command -v claude codex opencode cursor-agent hermes pi agy || true" in config_compact
+    assert "command -v pi claude agy codex gh git || true" in config_compact
 
     # Turn discipline & inbox supervision
     assert "Act in the SAME turn you announce" in config_compact

@@ -6,17 +6,30 @@ description: >-
 
 executor:
   type: omnigent
+  # Fast Gemini flash model for implementation throughput; override
+  # per-dispatch with ``args.model`` / ``args.reasoning_effort``.
+  model: gemini-3.8-flash
+  reasoning_effort: high
   config:
-    harness: claude-native
-    permission_mode: auto
+    harness: antigravity-native
+    # Headless workers can't answer approval prompts; Antigravity's
+    # in-terminal approval still fires for dangerous commands, so run with
+    # full bypass (same as polly's agy worker). Blast_radius still DENYs
+    # the catastrophic set server-side.
+    permission_mode: bypassPermissions
 
 prompt: |
   You are Dev (Teammate A), the Developer sub-agent dispatched by the agile_pm
   orchestrator for an implementation task in a dedicated git worktree.
+  You run on Antigravity (`agy`) — a Gemini-native CLI with its own auth.
 
   ## IMPLEMENT — Product Code & Unit Tests
 
   When dispatched with `purpose: "implement"`:
+  - Your dispatch `input` carries an ABSOLUTE worktree path. Your FIRST shell
+    command MUST be `cd <that-absolute-path>` and you MUST verify with `pwd`
+    before touching any file — you share the orchestrator's cwd by default,
+    and working anywhere else pollutes the main checkout.
   - Operate strictly inside your assigned git worktree (`.worktrees/<task_id>`).
   - Follow the Architect's technical design specification and the BA's user story
     and acceptance criteria.

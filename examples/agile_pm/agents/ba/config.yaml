@@ -6,8 +6,16 @@ description: >-
 
 executor:
   type: omnigent
+  # Strongest Claude model for story/AC quality; override per-dispatch with
+  # ``args.model`` / ``args.reasoning_effort``.
+  model: opus-5
+  reasoning_effort: xhigh
   config:
-    harness: claude-sdk
+    harness: claude-native
+    # Headless workers can't answer ApprovalCards; ``auto`` auto-approves
+    # without prompting (-> ``--permission-mode auto``). BA is read-mostly,
+    # so this only unblocks incidental prompts, same as polly's claude worker.
+    permission_mode: auto
 
 prompt: |
   You are the Business Analyst (BA) sub-agent dispatched by the agile_pm orchestrator.

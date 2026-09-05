@@ -2,10 +2,10 @@
 #
 # Agile PM coordinates a full agile development sprint across four specialized
 # sub-agents:
-#   - `ba`        — Business Analyst: user stories and Gherkin AC (claude-sdk)
-#   - `architect` — System Architect: technical design & task breakdown (claude-sdk)
-#   - `dev`       — Developer / Teammate A: code & unit tests in worktrees (claude-native)
-#   - `sit`       — SIT & Peer Reviewer / Teammate B: cross-vendor review & integration testing (codex-native)
+#   - `ba`        — Business Analyst: user stories and Gherkin AC (claude-native, opus-5)
+#   - `architect` — System Architect: technical design & task breakdown (claude-native, opus-5)
+#   - `dev`       — Developer / Teammate A: code & unit tests in worktrees (antigravity-native, gemini-3.8-flash)
+#   - `sit`       — SIT & Peer Reviewer / Teammate B: cross-vendor review & integration testing (codex-native, gpt-5.6-luna)
 #
 # Agile PM is a pure orchestrator: it writes no code and runs no direct tests itself.
 # It maintains the `.agile-pm/sprint.json` state machine, guides the 7-step sprint
@@ -21,14 +21,17 @@ description: >-
   Agile multi-agent development orchestrator managing sprint workflows across
   BA, Architect, Dev, and SIT sub-agents.
 
-# Orchestrator "brain": Claude Agent SDK with smart routing and 1M context window.
+# Orchestrator "brain": Pi (pi-native) with smart routing and 1M context window.
 # Agile PM writes no code and runs no direct tests itself — all coding, technical
 # design, and testing work is delegated to specialized sub-agents.
 executor:
   type: omnigent
+  # Pi's own model (see Pi models-store); override per-session with ``/model``.
+  model: muse-spark-1.3-contributor-free
+  reasoning_effort: xhigh
   context_window: 1000000
   config:
-    harness: claude-sdk
+    harness: pi-native
     smart_routing_harness: auto
 
 prompt: |
@@ -52,22 +55,22 @@ prompt: |
   ## Specialized Sub-Agents
 
   You have exactly FOUR specialized sub-agents (see `agents/<dir>/`):
-  1. `ba` — Business Analyst (`claude-sdk` harness):
+  1. `ba` — Business Analyst (`claude-native` harness, `opus-5` @ xhigh):
      - STORY: Drafts user stories in standard format with exhaustive Gherkin
        Acceptance Criteria (Given/When/Then), edge cases, and UAT scenarios.
      - UAT: Performs black-box validation of PR diffs and test execution evidence
        against the original acceptance criteria, returning an ACCEPTED or
        REJECTED verdict.
-  2. `architect` — System Architect (`claude-sdk` harness):
+  2. `architect` — System Architect (`claude-native` harness, `opus-5` @ xhigh):
      - DESIGN: Inspects codebase architecture, formulates technical designs,
        specifies API/DB schemas, defines component seams, and creates structured
        developer task breakdown packets.
      - EXPLORE: Conducts read-only codebase and dependency analysis.
-  3. `dev` — Developer / Teammate A (`claude-native` harness):
+  3. `dev` — Developer / Teammate A (`antigravity-native` harness, `gemini-3.8-flash` @ high):
      - IMPLEMENT: Writes product code and unit tests inside an isolated git
        worktree (`.worktrees/<task_id>`), drives unit tests to green, creates
        co-signed commits, and opens PRs via `gh pr create`.
-  4. `sit` — SIT / Peer Reviewer / Teammate B (`codex-native` harness):
+  4. `sit` — SIT / Peer Reviewer / Teammate B (`codex-native` harness, `gpt-5.6-luna` @ max):
      - REVIEW & SIT: Conducts cross-vendor peer review of Dev's PR diff against
        the Architect spec and BA user story; executes system integration test
        suites; reports structured defects (`blocking`, `non-blocking`,
@@ -95,11 +98,14 @@ prompt: |
      the Product Owner (PO) for explicit approval before creating any git worktree
      or dispatching developers.
   5. **Development & Unit Testing**:
-     For each approved task, create an isolated git worktree `.worktrees/<task_id>`
-     and dispatch `dev` (`agent="dev"`, `title="dev-<task_id>"`,
-     `args={purpose: "implement", input: ...}`). Dev implements product code and
-     unit tests, drives tests to green, authors co-signed commits, and opens a PR
-     via `gh pr create`.
+     For each approved task, create an isolated git worktree at the ABSOLUTE path
+     `<repo>/.worktrees/<task_id>` and dispatch `dev` (`agent="dev"`,
+     `title="dev-<task_id>"`, `args={purpose: "implement", input: ...}`). The
+     worktree path MUST be an absolute path embedded in the dispatch `input`, and
+     dev's first shell command MUST be `cd <absolute-worktree-path>` — dev shares
+     your cwd by default, so a relative path WILL pollute the main checkout.
+     Dev implements product code and unit tests, drives tests to green, authors
+     co-signed commits, and opens a PR via `gh pr create`.
   6. **Peer Review & SIT Verification (Defect Loop)**:
      Dispatch `sit` (`agent="sit"`, `title="sit-<task_id>"`,
      `args={purpose: "review", input: ...}`) to perform cross-vendor review and
@@ -119,8 +125,9 @@ prompt: |
   ## Strict Operating Rules
 
   - **Roster Preflight (FIRST turn, before any dispatch)**:
-    Each worker needs its CLI on PATH. On your very first turn before delegating,
-    run exactly ONE `sys_os_shell("command -v claude codex opencode cursor-agent hermes pi agy || true")`.
+    Each worker needs its CLI on PATH, and dev/sit need `gh`/`git` for PRs and
+    worktrees. On your very first turn before delegating, run exactly ONE
+    `sys_os_shell("command -v pi claude agy codex gh git || true")`.
     Record the available set and route work only to available workers.
   - **Co-signed Commits Trailer**:
     Every commit authored in the sprint must include the co-authored trailer:
@@ -133,6 +140,8 @@ prompt: |
     Sub-agents run autonomously and notify you through the inbox upon completion.
     Collect finished worker results with `sys_read_inbox`. Never busy-poll and
     do not use `sys_timer_set` or delayed self-messages to check on worker status.
+    (`timers: true` in this spec exists only for the framework's inbox auto-wake;
+    never arm a timer yourself.)
     If workers are running and the inbox is empty, end your turn and let the
     framework auto-wake you.
   - **Failure Recovery**:
@@ -186,6 +195,10 @@ tools:
     - sit
 
 guardrails:
+  # Day-long approval window — the PO approval gate (step 4) and PO merge
+  # handoff (step 7) wait on a human who may step away; an ASK must outlive
+  # that. Mirrors polly.
+  ask_timeout: 86400
   policies:
     blast_radius:
       type: function
